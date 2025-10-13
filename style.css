@@ -11,11 +11,11 @@ body.dark-mode {
 html, body {
     margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     height: 100%; background-color: var(--background-color); color: var(--text-color);
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: column; overflow: hidden;
 }
 #login-overlay, #users-modal-overlay, #channels-modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);
-    display: flex; justify-content: center; align-items: center; z-index: 200;
+    display: flex; justify-content: center; align-items: center; z-index: 200; animation: fadeIn 0.3s ease;
 }
 #login-overlay.hidden, #users-modal-overlay.hidden, #channels-modal-overlay.hidden { display: none; }
 #login-box, #users-modal-box, #channels-modal-box {
@@ -41,75 +41,99 @@ html, body {
 .app-header h1 {
     font-family: 'Poppins', sans-serif; font-size: 24px; margin: 0;
     background: linear-gradient(45deg, var(--accent-color), var(--primary-color));
-    -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.05);
 }
 .header-controls { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 #show-users-btn, #show-channels-btn, #theme-toggle-btn {
-    background: none; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;
-    font-size: 20px; width: 40px; height: 34px; display: flex; align-items: center; justify-content: center;
-    color: #555; padding: 0;
+    position: relative; background: none; border: 1px solid var(--border-color);
+    border-radius: 5px; cursor: pointer; font-size: 20px;
+    width: 40px; height: 34px; display: flex; align-items: center;
+    justify-content: center; color: #555; padding: 0;
 }
 body.dark-mode #show-users-btn, body.dark-mode #show-channels-btn, body.dark-mode #theme-toggle-btn { color: #b0b3b8; }
 #show-users-btn:hover, #show-channels-btn:hover, #theme-toggle-btn:hover { background-color: var(--background-color); }
+#pm-notification-dot {
+    position: absolute; top: 4px; right: 4px; width: 10px; height: 10px;
+    background-color: #e74c3c; border-radius: 50%;
+    border: 2px solid var(--light-text-color);
+}
+#pm-notification-dot.hidden { display: none; }
 #close-users-modal-btn, #close-channels-modal-btn {
     position: absolute; top: 10px; right: 15px; font-size: 24px; line-height: 1;
     background: none; border: none; cursor: pointer; color: #888;
 }
 #chat-container {
-    display: flex; flex-direction: column; flex-grow: 1; width: 100%; max-width: 800px;
-    margin: 0 auto; background-color: var(--light-text-color); box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;
+    display: flex; flex-direction: column; flex-grow: 1;
+    width: 100%; max-width: 800px; margin: 0 auto;
+    background-color: var(--light-text-color);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;
 }
 #message-area {
-    flex-grow: 1; padding: 20px; overflow-y: auto; list-style-type: none; margin: 0;
-    display: flex; flex-direction: column;
+    flex-grow: 1; padding: 20px; overflow-y: auto; list-style-type: none;
+    margin: 0; display: flex; flex-direction: column;
 }
 #message-area li {
-    position: relative; display: flex; flex-direction: column; padding: 10px 15px; border-radius: 20px;
-    max-width: 70%; line-height: 1.4; margin-bottom: 2px; word-wrap: break-word;
+    position: relative; display: flex; flex-direction: column; padding: 10px 15px;
+    border-radius: 20px; max-width: 70%; line-height: 1.4;
+    word-wrap: break-word; animation: fadeInUp 0.3s ease-out;
 }
 #message-area li.first-message { margin-top: 8px; }
+#message-area li.consecutive-message { margin-top: 2px; }
 #message-area li.consecutive-message strong, #message-area li.consecutive-message .parent-message-quote { display: none; }
 #message-area li strong { font-size: 13px; margin-bottom: 4px; }
 .other-message { align-self: flex-start; background-color: var(--message-bubble-color); color: var(--text-color); }
 .my-message { align-self: flex-end; background-color: var(--primary-color); color: white; }
-.my-message strong { color: white; }
-.my-message .parent-message-quote { border-left-color: rgba(255,255,255,0.5); opacity: 0.9;}
+.my-message strong, .my-message .parent-message-quote { color: white; }
+.my-message .parent-message-quote { border-left-color: rgba(255,255,255,0.5); opacity: 0.9; }
 #input-form {
     display: flex; padding: 10px; border-top: 1px solid var(--border-color);
     position: relative; flex-shrink: 0; background-color: var(--light-text-color);
 }
 #message-input {
-    flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 20px;
-    margin-right: 10px; font-size: 16px; background-color: var(--background-color); color: var(--text-color);
+    flex-grow: 1; padding: 10px; border: 1px solid var(--border-color);
+    border-radius: 20px; margin-right: 10px; font-size: 16px;
+    background-color: var(--background-color); color: var(--text-color);
 }
 #input-form button[type="submit"] {
     padding: 10px 20px; border: none; background-color: var(--primary-color);
-    color: white; font-size: 16px; border-radius: 20px; cursor: pointer; transition: background-color 0.2s;
+    color: white; font-size: 16px; border-radius: 20px; cursor: pointer;
+    transition: background-color 0.2s;
 }
 #input-form button[type="submit"]:hover { background-color: var(--accent-color); }
-#typing-indicator { height: 20px; padding: 0 20px; font-style: italic; color: #888; font-size: 14px; }
-#attach-btn, #emoji-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0 10px; color: #555; }
+#typing-indicator { height: 20px; padding: 0 20px; font-style: italic; color: #888; font-size: 14px; animation: pulsate 1.5s ease-in-out infinite; }
+#attach-btn, #emoji-btn {
+    background: none; border: none; font-size: 20px; cursor: pointer;
+    padding: 0 10px; color: #555;
+}
 body.dark-mode #attach-btn, body.dark-mode #emoji-btn { color: #b0b3b8; }
 emoji-picker { position: absolute; bottom: 100%; left: 50px; z-index: 10; display: none; }
 emoji-picker.visible { display: block; }
+.chat-image { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
 #user-list, #channel-list { list-style-type: none; padding: 0; margin: 0; overflow-y: auto; text-align: left; }
-#user-list li, #channel-list li { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 0; cursor: pointer;}
-#user-list li:hover {
-    background-color: var(--background-color); /* Thêm hiệu ứng hover */
+#user-list li, #channel-list li {
+    display: flex; align-items: center; flex-wrap: wrap; padding: 8px 10px; border-radius: 5px;
 }
+#user-list li:hover, #channel-list li:hover { background-color: var(--background-color); }
+#channel-list li.active { background-color: var(--primary-color); color: white; }
+#user-list li.self { font-style: italic; }
+#user-list li.self .status-dot { background-color: #2ecc71; }
 .status-dot { height: 8px; width: 8px; background-color: #888; border-radius: 50%; margin-right: 10px; }
 .username { font-weight: 500; }
 .last-seen { font-size: 12px; color: #888; margin-left: auto; }
+.unread-count { margin-left: 8px; background-color: #e74c3c; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; }
 #user-list li.online .status-dot { background-color: #0084ff; }
 #user-list li.online .username { font-weight: bold; color: var(--text-color); }
-#channel-list li { cursor: pointer; border-radius: 5px; padding: 10px; }
-#channel-list li:hover { background-color: var(--background-color); }
-#channel-list li.active { background-color: var(--primary-color); color: white; }
-.reply-btn {
-    position: absolute; top: 2px; right: 10px; background: rgba(0,0,0,0.1); border: none;
-    border-radius: 5px; cursor: pointer; font-size: 12px; padding: 2px 6px; opacity: 0; transition: opacity 0.2s;
+.reply-btn, .delete-btn, .edit-btn {
+    position: absolute; top: 2px; background: rgba(0,0,0,0.1);
+    border: none; border-radius: 5px; cursor: pointer; font-size: 12px;
+    padding: 2px 6px; opacity: 0; transition: opacity 0.2s;
 }
-#message-area li:hover .reply-btn { opacity: 1; }
+body.dark-mode .reply-btn, body.dark-mode .delete-btn, body.dark-mode .edit-btn { color: white; background: rgba(255,255,255,0.2); }
+#message-area li:hover .reply-btn, #message-area li:hover .delete-btn, #message-area li:hover .edit-btn { opacity: 1; }
+.reply-btn { right: 10px; }
+.delete-btn { right: 55px; color: #d9534f; }
+.edit-btn { right: 105px; color: #337ab7; }
 .parent-message-quote {
     border-left: 2px solid #ccc; padding: 4px 8px; margin-bottom: 5px;
     font-size: 13px; opacity: 0.8;
@@ -122,111 +146,20 @@ emoji-picker.visible { display: block; }
 #replying-to-banner.hidden { display: none; }
 #replying-to-banner-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #cancel-reply-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-color); }
-.delete-btn {
-    position: absolute;
-    top: 2px;
-    right: 45px; /* Đặt cạnh nút Reply */
-    background: rgba(255, 0, 0, 0.1);
-    color: #d9534f;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 6px;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-#message-area li:hover .delete-btn {
-    opacity: 1;
-}
-.edit-btn {
-    position: absolute;
-    top: 2px;
-    right: 80px; /* Đặt cạnh nút Delete */
-    background: rgba(80, 80, 80, 0.1);
-    color: #337ab7;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 6px;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-#message-area li:hover .edit-btn {
-    opacity: 1;
-}
-.message-content-input { /* Style cho ô input khi sửa tin nhắn */
-    width: 100%;
-    border: 1px solid var(--primary-color);
-    border-radius: 5px;
-    padding: 4px;
-    font-family: inherit;
-    font-size: inherit;
-}
-/* --- CSS CHO TÌM KIẾM --- */
-#search-form {
-    margin-right: 10px;
-}
+#search-form { margin-right: 10px; }
 #search-input {
-    border: 1px solid var(--border-color);
-    border-radius: 15px;
-    padding: 6px 12px;
-    background-color: var(--background-color);
+    border: 1px solid var(--border-color); border-radius: 15px;
+    padding: 6px 12px; background-color: var(--background-color);
     color: var(--text-color);
 }
 #search-results-banner {
-    padding: 8px 15px;
-    background-color: #fffbe6;
-    font-size: 14px;
-    color: #333;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 8px 15px; background-color: #fffbe6; font-size: 14px;
+    color: #333; border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
 }
-body.dark-mode #search-results-banner {
-    background-color: #444;
-}
-#clear-search-btn {
-    background: none;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    cursor: pointer;
-}
-/* --- CSS CHO CÁC NÂNG CẤP CUỐI CÙNG --- */
+body.dark-mode #search-results-banner { background-color: #444; }
+#clear-search-btn { background: none; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; }
 
-/* Chấm xanh lá cây cho chính mình */
-#user-list li.self .status-dot {
-    background-color: #2ecc71; /* Màu xanh lá cây */
-}
-
-/* Số tin nhắn chưa đọc */
-.unread-count {
-    margin-left: 8px;
-    background-color: #e74c3c; /* Màu đỏ */
-    color: white;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-/* --- CSS CHO THÔNG BÁO TIN NHẮN RIÊNG --- */
-#show-users-btn {
-    position: relative; /* Bắt buộc để định vị chấm đỏ */
-}
-
-#pm-notification-dot {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 10px;
-    height: 10px;
-    background-color: #e74c3c; /* Màu đỏ */
-    border-radius: 50%;
-    border: 2px solid var(--light-text-color);
-}
-
-#pm-notification-dot.hidden {
-    display: none;
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulsate { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
