@@ -35,7 +35,7 @@ const PrivateMessageSchema = new mongoose.Schema({
 });
 const PrivateMessage = mongoose.model('PrivateMessage', PrivateMessageSchema);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, '')));
 app.use(express.json());
 
