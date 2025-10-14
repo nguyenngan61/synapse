@@ -28,6 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const chatTitle = document.querySelector('.app-header h1');
     const pmNotificationDot = document.getElementById('pm-notification-dot');
+    const searchToggleBtn = document.getElementById('search-toggle-btn');
+    const appHeader = document.querySelector('.app-header');
+
+    searchToggleBtn.addEventListener('click', () => {
+        appHeader.classList.toggle('search-active');
+        if (appHeader.classList.contains('search-active')) {
+            searchInput.focus();
+        }
+    });   
 
     // Các biến trạng thái
     let user = null;

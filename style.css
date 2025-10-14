@@ -167,44 +167,59 @@ body.dark-mode #search-results-banner { background-color: #444; }
 /* --- CSS CHO GIAO DIỆN DI ĐỘNG (RESPONSIVE) --- */
 
 @media (max-width: 768px) {
-    body {
-        overflow: auto;
-        /* Giúp trải nghiệm cuộn trên di động tốt hơn */
-    }
-
     .app-header {
-        padding: 8px 10px; /* Giảm khoảng cách bên trong header */
+        padding: 8px 10px;
+        position: relative; /* Cần cho việc định vị ô tìm kiếm */
     }
 
-    /* Giữ lại nhưng thu nhỏ logo và tiêu đề */
-    #logo-img {
-        height: 30px;
-        margin: 0 8px;
-    }
-    .app-header h1 {
-        font-size: 18px;
+    /* Mặc định ẩn ô tìm kiếm và nút kênh */
+    #search-form,
+    #show-channels-btn {
+        display: none;
     }
 
-    /* Thu nhỏ ô tìm kiếm và các nút bấm */
+    /* Nút tìm kiếm bằng icon sẽ hiện ra */
+    #search-toggle-btn {
+        display: flex;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #555;
+        margin-right: 5px;
+    }
+
+    /* Khi nhấn vào nút tìm kiếm, header sẽ có class 'search-active' */
+    .app-header.search-active #search-form {
+        display: flex; /* Hiện ô tìm kiếm ra */
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        animation: fadeIn 0.2s ease;
+    }
+
     #search-input {
-        width: 100px; /* Giảm đáng kể chiều rộng ô tìm kiếm */
-        padding: 4px 10px;
+        width: 100%; /* Cho ô tìm kiếm chiếm toàn bộ chiều rộng */
     }
 
-    #show-users-btn, #show-channels-btn, #theme-toggle-btn {
-        width: 36px;
-        height: 32px;
-        font-size: 18px;
+    /* Ẩn các thành phần khác đi để nhường chỗ cho ô tìm kiếm */
+    .app-header.search-active h1,
+    .app-header.search-active #logo-img,
+    .app-header.search-active .header-controls button:not(#search-toggle-btn),
+    .app-header.search-active #show-channels-btn {
+        display: none;
     }
 
-    /* Đảm bảo khung chat chiếm toàn bộ không gian còn lại */
+    /* Đảm bảo khung chat chiếm toàn bộ màn hình */
     #chat-container {
         width: 100%;
         height: 100%;
-        max-width: 100%;
+        max-width: none;
         max-height: none;
-        box-shadow: none;
-        border-radius: 0;
         margin: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 }
