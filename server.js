@@ -12,6 +12,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const upload = multer({ dest: 'uploads/' });
 const onlineUsers = {};
 const channels = ["#synapse", "#projects", "#q-and-a"];
 
@@ -38,14 +39,18 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, '')));
 app.use(express.json());
 
-app.post('/upload-image', multer({ dest: 'uploads/' }).single('image'), async (req, res) => {
+app.post('/upload-image', upload.single('image'), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ error: 'Không có file ảnh nào được gửi.' });
+        if (!req.file) { return res.status(400).json({ error: 'Không có file ảnh nào được gửi.' }); }
         const result = await cloudinary.uploader.upload(req.file.path, { folder: 'synapse_chat_images' });
         fs.unlinkSync(req.file.path);
         res.status(200).json({ imageUrl: result.secure_url });
-    } catch (error) { console.error('[SERVER] Lỗi tải ảnh lên Cloudinary:', error); res.status(500).json({ error: 'Lỗi tải ảnh lên.' }); }
+    } catch (error) {
+        console.error('[SERVER] Lỗi tải ảnh lên Cloudinary:', error);
+        res.status(500).json({ error: 'Lỗi tải ảnh lên.' });
+    }
 });
+
 app.get('/search', async (req, res) => {
     const { term, room } = req.query; if (!term || !room) { return res.status(400).json({ error: 'Thiếu từ khóa hoặc phòng chat.' }); }
     try {

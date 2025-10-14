@@ -1,6 +1,7 @@
 const socket = io();
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Lấy tất cả các phần tử HTML
     const form = document.getElementById('input-form');
     const input = document.getElementById('message-input');
     const messages = document.getElementById('message-area');
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatTitle = document.querySelector('.app-header h1');
     const pmNotificationDot = document.getElementById('pm-notification-dot');
 
+    // Các biến trạng thái
     let user = null;
     let currentChat = { type: 'channel', name: '#synapse' };
     let unreadMessages = {};
@@ -40,16 +42,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationSound = new Audio('/sounds/notification.mp3');
     const CONSECUTIVE_MESSAGE_TIMEOUT = 5 * 60 * 1000;
 
+    // --- LOGIC DARK MODE ---
     function applyTheme(theme) {
-        if (theme === 'dark') { body.classList.add('dark-mode'); themeToggleBtn.textContent = '☀️'; if (logoImg) logoImg.src = 'images/logo-dark.png'; }
-        else { body.classList.remove('dark-mode'); themeToggleBtn.textContent = '🌙'; if (logoImg) logoImg.src = 'images/logo-light.png'; }
+        if (theme === 'dark') {
+            body.classList.add('dark-mode');
+            themeToggleBtn.textContent = '☀️';
+            if (logoImg) logoImg.src = 'images/logo-dark.png';
+        } else {
+            body.classList.remove('dark-mode');
+            themeToggleBtn.textContent = '🌙';
+            if (logoImg) logoImg.src = 'images/logo-light.png';
+        }
     }
     const savedTheme = localStorage.getItem('theme') || 'light';
     applyTheme(savedTheme);
-    themeToggleBtn.addEventListener('click', () => { const newTheme = body.classList.contains('dark-mode') ? 'light' : 'dark'; localStorage.setItem('theme', newTheme); applyTheme(newTheme); });
+    themeToggleBtn.addEventListener('click', () => {
+        const newTheme = body.classList.contains('dark-mode') ? 'light' : 'dark';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+    });
 
+    // --- LOGIC ĐĂNG NHẬP & MODALS ---
     loginForm.addEventListener('submit', (e) => {
-        e.preventDefault(); const username = usernameInput.value.trim();
+        e.preventDefault();
+        const username = usernameInput.value.trim();
         if (username) {
             user = username;
             socket.emit('user joined', { username, channel: currentChat.name });
@@ -57,17 +73,23 @@ document.addEventListener('DOMContentLoaded', () => {
             chatTitle.textContent = currentChat.name.replace('#', '').toUpperCase();
         }
     });
-    showUsersBtn.addEventListener('click', () => { usersModalOverlay.classList.remove('hidden'); pmNotificationDot.classList.add('hidden'); });
+    showUsersBtn.addEventListener('click', () => {
+        usersModalOverlay.classList.remove('hidden');
+        pmNotificationDot.classList.add('hidden');
+    });
     closeUsersModalBtn.addEventListener('click', () => { usersModalOverlay.classList.add('hidden'); });
     usersModalOverlay.addEventListener('click', (e) => { if (e.target === usersModalOverlay) { usersModalOverlay.classList.add('hidden'); } });
     showChannelsBtn.addEventListener('click', () => { channelsModalOverlay.classList.remove('hidden'); });
     closeChannelsModalBtn.addEventListener('click', () => { channelsModalOverlay.classList.add('hidden'); });
     channelsModalOverlay.addEventListener('click', (e) => { if (e.target === channelsModalOverlay) { channelsModalOverlay.classList.add('hidden'); } });
 
+    // --- LOGIC KÊNH CHAT ---
     function updateChannelList(channels, activeChannelName) {
-        if (!channelList) return; channelList.innerHTML = '';
+        if (!channelList) return;
+        channelList.innerHTML = '';
         channels.forEach(channel => {
-            const channelItem = document.createElement('li'); channelItem.textContent = channel;
+            const channelItem = document.createElement('li');
+            channelItem.textContent = channel;
             if (channel === activeChannelName) { channelItem.classList.add('active'); }
             channelItem.addEventListener('click', () => {
                 if (currentChat.type !== 'channel' || currentChat.name !== channel) {
@@ -82,37 +104,78 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- LOGIC DANH SÁCH USER ---
     function updateUserList() {
         if (!userList) return;
         userList.innerHTML = '';
-        currentUsers.sort((a, b) => { if (a.username === user) return -1; if (b.username === user) return 1; if (a.status === 'online' && b.status !== 'online') return -1; if (b.status === 'online' && a.status !== 'online') return 1; return 0; }).forEach(u => {
-            if (!u || !u.username) return;
-            const userItem = document.createElement('li');
-            userItem.className = u.status;
-            if (u.username === user) { userItem.classList.add('self'); }
-            if (u.username !== user) {
-                userItem.addEventListener('click', () => {
-                    currentChat = { type: 'private', name: u.username };
-                    chatTitle.textContent = `Chat with ${u.username}`;
-                    socket.emit('fetch private history', { user1: user, user2: u.username });
-                    if (unreadMessages[u.username]) { unreadMessages[u.username] = 0; updateUserList(); }
-                    usersModalOverlay.classList.add('hidden');
-                });
-            }
-            const statusDot = document.createElement('span'); statusDot.className = 'status-dot';
-            const username = document.createElement('span'); username.className = 'username';
-            username.textContent = u.username;
-            userItem.appendChild(statusDot);
-            userItem.appendChild(username);
-            if (unreadMessages[u.username] > 0) { const unreadCount = document.createElement('span'); unreadCount.className = 'unread-count'; unreadCount.textContent = unreadMessages[u.username]; userItem.appendChild(unreadCount); }
-            if (u.status === 'offline') { const lastSeen = document.createElement('span'); lastSeen.className = 'last-seen'; lastSeen.textContent = formatTimeAgo(u.lastSeen); userItem.appendChild(lastSeen); }
-            userList.appendChild(userItem);
-        });
+        currentUsers
+            .sort((a, b) => {
+                // 1. Luôn đưa chính mình lên đầu tiên
+                if (a.username === user) return -1;
+                if (b.username === user) return 1;
+
+                // 2. Sắp xếp theo trạng thái (online trước, offline sau)
+                if (a.status === 'online' && b.status === 'offline') return -1;
+                if (a.status === 'offline' && b.status === 'online') return 1;
+
+                // 3. Nếu cùng là offline, người offline GẦN NHẤT lên trước
+                if (a.status === 'offline' && b.status === 'offline') {
+                    return new Date(b.lastSeen) - new Date(a.lastSeen);
+                }
+
+                // 4. Nếu cùng là online, giữ nguyên thứ tự (hoặc sắp xếp theo tên)
+                return a.username.localeCompare(b.username);
+            })
+            .forEach(u => {
+                if (!u || !u.username) return;
+                const userItem = document.createElement('li');
+                userItem.className = u.status;
+                if (u.username === user) {
+                    userItem.classList.add('self');
+                }
+                if (u.username !== user) {
+                    userItem.addEventListener('click', () => {
+                        currentChat = { type: 'private', name: u.username };
+                        chatTitle.textContent = `Chat with ${u.username}`;
+                        socket.emit('fetch private history', { user1: user, user2: u.username });
+                        if (unreadMessages[u.username]) {
+                            unreadMessages[u.username] = 0;
+                            updateUserList();
+                        }
+                        usersModalOverlay.classList.add('hidden');
+                    });
+                }
+                const statusDot = document.createElement('span');
+                statusDot.className = 'status-dot';
+                const username = document.createElement('span');
+                username.className = 'username';
+                username.textContent = u.username;
+                userItem.appendChild(statusDot);
+                userItem.appendChild(username);
+                if (unreadMessages[u.username] > 0) {
+                    const unreadCount = document.createElement('span');
+                    unreadCount.className = 'unread-count';
+                    unreadCount.textContent = unreadMessages[u.username];
+                    userItem.appendChild(unreadCount);
+                }
+                if (u.status === 'offline') {
+                    const lastSeen = document.createElement('span');
+                    lastSeen.className = 'last-seen';
+                    lastSeen.textContent = formatTimeAgo(u.lastSeen);
+                    userItem.appendChild(lastSeen);
+                }
+                userList.appendChild(userItem);
+            });
     }
 
+    // --- LOGIC TÌM KIẾM ---
     searchForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); const searchTerm = searchInput.value.trim();
-        if (!searchTerm) { socket.emit('join channel', { newChannel: currentChat.name }); return; }
+        e.preventDefault();
+        const searchTerm = searchInput.value.trim();
+        if (!searchTerm) {
+            socket.emit('join channel', { newChannel: currentChat.name });
+            return;
+        }
         try {
             const response = await fetch(`/search?term=${encodeURIComponent(searchTerm)}&room=${encodeURIComponent(currentChat.name)}`);
             const results = await response.json();
@@ -122,10 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsBanner.innerHTML = `<span>Kết quả tìm kiếm cho: "<strong>${searchTerm}</strong>"</span><button id="clear-search-btn">Xóa tìm kiếm</button>`;
             messages.prepend(resultsBanner);
             results.forEach(msg => addMessage(msg, false));
-            document.getElementById('clear-search-btn').addEventListener('click', () => { searchInput.value = ''; socket.emit('join channel', { newChannel: currentChat.name }); });
+            document.getElementById('clear-search-btn').addEventListener('click', () => {
+                searchInput.value = '';
+                socket.emit('join channel', { newChannel: currentChat.name });
+            });
         } catch (error) { console.error('Lỗi khi tìm kiếm:', error); }
     });
 
+    // --- LOGIC GỬI FILE & EMOJI ---
     emojiBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!emojiPicker) { emojiPicker = document.createElement('emoji-picker'); form.appendChild(emojiPicker); emojiPicker.addEventListener('emoji-click', event => { input.value += event.detail.unicode; }); } emojiPicker.classList.toggle('visible'); });
     document.addEventListener('click', () => { if (emojiPicker && emojiPicker.classList.contains('visible')) { emojiPicker.classList.remove('visible'); } });
     attachBtn.addEventListener('click', () => { fileInput.click(); });
@@ -147,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = null;
     });
 
+    // --- LOGIC TIN NHẮN ---
     const addMessage = (message, isPrivate = false) => {
         const item = document.createElement('li');
         item.id = message._id;
@@ -237,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             e.preventDefault();
                             const newContent = editInput.value.trim();
                             if (newContent && newContent !== currentContent) {
-                                if (isPrivate) { socket.emit('edit private message', { messageId: message._id, newContent }); }
+                                if (isPrivate) { socket.emit('edit private message', { messageId: message._id, newContent }); } 
                                 else { socket.emit('edit message', { messageId: message._id, newContent }); }
                             }
                             editInput.replaceWith(messageContentElement);
@@ -270,10 +338,16 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('stop typing', { room: currentChat.name });
     });
     
+    // --- LẮNG NGHE CÁC SỰ KIỆN TỪ SERVER ---
     socket.on('channels', (channels) => { updateChannelList(channels, currentChat.name); });
     socket.on('load old messages', (oldMessages) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; oldMessages.forEach(msg => addMessage(msg, false)); });
     socket.on('private history loaded', (history) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; history.forEach(msg => addMessage(msg, true)); });
-    socket.on('chat message', (msg) => { if (currentChat.type === 'channel' && currentChat.name === msg.room) { typingIndicator.textContent = ''; addMessage(msg, false); if (document.hidden && msg.user !== user) { notificationCount++; document.title = `(${notificationCount}) ${originalTitle}`; notificationSound.currentTime = 0; notificationSound.play().catch(e => {}); } } });
+    socket.on('chat message', (msg) => {
+        if (currentChat.type === 'channel' && currentChat.name === msg.room) {
+            typingIndicator.textContent = ''; addMessage(msg, false);
+            if (document.hidden && msg.user !== user) { notificationCount++; document.title = `(${notificationCount}) ${originalTitle}`; notificationSound.currentTime = 0; notificationSound.play().catch(e => {}); }
+        }
+    });
     socket.on('receive private message', (msg) => {
         if (msg.fromUser === user) { if (currentChat.type === 'private' && currentChat.name === msg.toUser) { addMessage(msg, true); } return; }
         const chatPartner = msg.fromUser;
