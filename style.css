@@ -167,28 +167,51 @@ body.dark-mode #search-results-banner { background-color: #444; }
 
 
 @media (max-width: 768px) {
+    /* --- BỐ CỤC CHUNG CHO DI ĐỘNG --- */
     body {
-        height: 100%; 
-        overflow: hidden;
+        height: 100vh; /* Sử dụng chiều cao viewport để tính toán */
+        overflow: hidden; /* Ngăn toàn bộ trang bị cuộn */
     }
-    #chat-container {
+    
+    .app-wrapper {
         height: 100%;
-        max-height: none;
-        border-radius: 0;
-        box-shadow: none;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
+    #chat-container {
+        flex-grow: 1; /* Cho phép khung chat lấp đầy không gian còn lại */
+        overflow: hidden; /* Bắt buộc để thanh cuộn chỉ xuất hiện bên trong */
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%;
+        max-height: none;
+    }
+
+    #message-area {
+        height: 100%; /* Đảm bảo khu vực tin nhắn có chiều cao để cuộn bên trong */
+    }
+
+    /* --- HEADER 2 HÀNG CHO DI ĐỘNG --- */
     .app-header {
         padding: 10px;
-        flex-direction: column; 
-        gap: 10px;
+        flex-direction: column; /* Xếp 2 hàng chồng lên nhau */
+        gap: 10px; /* Khoảng cách giữa 2 hàng */
+        flex-shrink: 0;
     }
+
     .header-top, .header-bottom {
         display: flex;
         align-items: center;
         width: 100%;
     }
 
+    /* Hàng 1: Logo & Tên */
+    .header-top {
+        justify-content: center; /* Căn giữa logo và tên */
+        position: relative;
+    }
     .header-top #logo-img {
         height: 32px;
         margin-right: 10px;
@@ -197,19 +220,40 @@ body.dark-mode #search-results-banner { background-color: #444; }
         font-size: 22px;
     }
 
+    /* Hàng 2: Các nút & Tìm kiếm */
+    .header-bottom {
+        gap: 10px;
+    }
     .header-bottom #search-form {
-        flex-grow: 1;
-        margin: 0 10px;
+        flex-grow: 1; /* Cho ô tìm kiếm chiếm hết không gian */
     }
     .header-bottom #search-input {
         width: 100%;
+        font-size: 14px;
+    }
+    .header-bottom button {
+        flex-shrink: 0; /* Ngăn các nút bị co lại */
     }
 
+    /* --- CÁC ĐIỀU CHỈNH KHÁC --- */
     .header-controls {
-        display: contents; 
+        display: contents; /* Bỏ layout của nhóm cũ */
     }
 
-    #show-users-btn, #show-channels-btn, #theme-toggle-btn {
-        flex-shrink: 0;
+    #message-area li {
+        max-width: 85%;
+    }
+    
+    /* Thu nhỏ box nhập liệu một chút */
+    #input-form {
+        padding: 8px;
+    }
+    #message-input {
+        padding: 8px 15px;
+        font-size: 15px;
+    }
+    #input-form button {
+        font-size: 15px;
+        padding: 8px 15px;
     }
 }

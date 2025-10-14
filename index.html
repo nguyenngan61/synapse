@@ -35,32 +35,37 @@
             </form>
         </div>
     </div>
-    <header class="app-header">
-        <div class="header-top">
-            <img src="images/logo-light.png" alt="CLEVERNOW GmbH Logo" id="logo-img">
-            <h1>SYNAPSE</h1>
-        </div>
-        <div class="header-bottom">
-            <button id="show-channels-btn" title="Hiển thị Kênh">☰</button>
-            <form id="search-form">
-                <input type="search" id="search-input" placeholder="Tìm kiếm trong kênh...">
+
+    <div class="app-wrapper">
+        <header class="app-header">
+            <div class="header-top">
+                <img src="images/logo-light.png" alt="CLEVERNOW GmbH Logo" id="logo-img">
+                <h1>SYNAPSE</h1>
+            </div>
+            <div class="header-bottom">
+                <button id="show-channels-btn" title="Hiển thị Kênh">☰</button>
+                <form id="search-form">
+                    <input type="search" id="search-input" placeholder="Tìm kiếm...">
+                </form>
+                <button id="show-users-btn" title="Người dùng Online">👤<span id="pm-notification-dot" class="hidden"></span></button>
+                <button id="theme-toggle-btn" title="Đổi giao diện">🌙</button>
+            </div>
+        </header>
+
+        <div id="chat-container">
+            <ul id="message-area"></ul>
+            <div id="replying-to-banner" class="hidden"></div>
+            <div id="typing-indicator"></div>
+            <form id="input-form">
+                <button type="button" id="attach-btn" title="Đính kèm file">📎</button>
+                <button type="button" id="emoji-btn">😀</button>
+                <input type="file" id="file-input" accept="image/*" hidden>
+                <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+                <button type="submit">Gửi</button>
             </form>
-            <button id="show-users-btn" title="Người dùng Online">👤</button>
-            <button id="theme-toggle-btn" title="Đổi giao diện">🌙</button>
         </div>
-    </header>
-    <div id="chat-container">
-        <ul id="message-area"></ul>
-        <div id="replying-to-banner" class="hidden"></div>
-        <div id="typing-indicator"></div>
-        <form id="input-form">
-            <button type="button" id="attach-btn" title="Đính kèm file">📎</button>
-            <button type="button" id="emoji-btn">😀</button>
-            <input type="file" id="file-input" accept="image/*" hidden>
-            <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off">
-            <button type="submit">Gửi</button>
-        </form>
     </div>
+
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.21.2/index.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/client.js"></script>
