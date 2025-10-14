@@ -1,7 +1,6 @@
 const socket = io();
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Lấy tất cả các phần tử HTML
     const form = document.getElementById('input-form');
     const input = document.getElementById('message-input');
     const messages = document.getElementById('message-area');
@@ -29,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatTitle = document.querySelector('.app-header h1');
     const pmNotificationDot = document.getElementById('pm-notification-dot');
 
-    // Các biến trạng thái
     let user = null;
     let currentChat = { type: 'channel', name: '#synapse' };
     let unreadMessages = {};
@@ -42,30 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationSound = new Audio('/sounds/notification.mp3');
     const CONSECUTIVE_MESSAGE_TIMEOUT = 5 * 60 * 1000;
 
-    // --- LOGIC DARK MODE ---
     function applyTheme(theme) {
-        if (theme === 'dark') {
-            body.classList.add('dark-mode');
-            themeToggleBtn.textContent = '☀️';
-            if (logoImg) logoImg.src = 'images/logo-dark.png';
-        } else {
-            body.classList.remove('dark-mode');
-            themeToggleBtn.textContent = '🌙';
-            if (logoImg) logoImg.src = 'images/logo-light.png';
-        }
+        if (theme === 'dark') { body.classList.add('dark-mode'); themeToggleBtn.textContent = '☀️'; if (logoImg) logoImg.src = 'images/logo-dark.png'; }
+        else { body.classList.remove('dark-mode'); themeToggleBtn.textContent = '🌙'; if (logoImg) logoImg.src = 'images/logo-light.png'; }
     }
     const savedTheme = localStorage.getItem('theme') || 'light';
     applyTheme(savedTheme);
-    themeToggleBtn.addEventListener('click', () => {
-        const newTheme = body.classList.contains('dark-mode') ? 'light' : 'dark';
-        localStorage.setItem('theme', newTheme);
-        applyTheme(newTheme);
-    });
+    themeToggleBtn.addEventListener('click', () => { const newTheme = body.classList.contains('dark-mode') ? 'light' : 'dark'; localStorage.setItem('theme', newTheme); applyTheme(newTheme); });
 
-    // --- LOGIC ĐĂNG NHẬP & MODALS ---
     loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = usernameInput.value.trim();
+        e.preventDefault(); const username = usernameInput.value.trim();
         if (username) {
             user = username;
             socket.emit('user joined', { username, channel: currentChat.name });
@@ -73,23 +57,17 @@ document.addEventListener('DOMContentLoaded', () => {
             chatTitle.textContent = currentChat.name.replace('#', '').toUpperCase();
         }
     });
-    showUsersBtn.addEventListener('click', () => {
-        usersModalOverlay.classList.remove('hidden');
-        pmNotificationDot.classList.add('hidden');
-    });
+    showUsersBtn.addEventListener('click', () => { usersModalOverlay.classList.remove('hidden'); pmNotificationDot.classList.add('hidden'); });
     closeUsersModalBtn.addEventListener('click', () => { usersModalOverlay.classList.add('hidden'); });
     usersModalOverlay.addEventListener('click', (e) => { if (e.target === usersModalOverlay) { usersModalOverlay.classList.add('hidden'); } });
     showChannelsBtn.addEventListener('click', () => { channelsModalOverlay.classList.remove('hidden'); });
     closeChannelsModalBtn.addEventListener('click', () => { channelsModalOverlay.classList.add('hidden'); });
     channelsModalOverlay.addEventListener('click', (e) => { if (e.target === channelsModalOverlay) { channelsModalOverlay.classList.add('hidden'); } });
 
-    // --- LOGIC KÊNH CHAT ---
     function updateChannelList(channels, activeChannelName) {
-        if (!channelList) return;
-        channelList.innerHTML = '';
+        if (!channelList) return; channelList.innerHTML = '';
         channels.forEach(channel => {
-            const channelItem = document.createElement('li');
-            channelItem.textContent = channel;
+            const channelItem = document.createElement('li'); channelItem.textContent = channel;
             if (channel === activeChannelName) { channelItem.classList.add('active'); }
             channelItem.addEventListener('click', () => {
                 if (currentChat.type !== 'channel' || currentChat.name !== channel) {
@@ -104,68 +82,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- LOGIC DANH SÁCH USER ---
     function updateUserList() {
         if (!userList) return;
         userList.innerHTML = '';
-        currentUsers
-            .sort((a, b) => {
-                if (a.username === user) return -1;
-                if (b.username === user) return 1;
-                if (a.status === 'online' && b.status !== 'online') return -1;
-                if (b.status === 'online' && a.status !== 'online') return 1;
-                return 0;
-            })
-            .forEach(u => {
-                if (!u || !u.username) return;
-                const userItem = document.createElement('li');
-                userItem.className = u.status;
-                if (u.username === user) {
-                    userItem.classList.add('self');
-                }
-                if (u.username !== user) {
-                    userItem.addEventListener('click', () => {
-                        currentChat = { type: 'private', name: u.username };
-                        chatTitle.textContent = `Chat with ${u.username}`;
-                        socket.emit('fetch private history', { user1: user, user2: u.username });
-                        if (unreadMessages[u.username]) {
-                            unreadMessages[u.username] = 0;
-                            updateUserList();
-                        }
-                        usersModalOverlay.classList.add('hidden');
-                    });
-                }
-                const statusDot = document.createElement('span');
-                statusDot.className = 'status-dot';
-                const username = document.createElement('span');
-                username.className = 'username';
-                username.textContent = u.username;
-                userItem.appendChild(statusDot);
-                userItem.appendChild(username);
-                if (unreadMessages[u.username] > 0) {
-                    const unreadCount = document.createElement('span');
-                    unreadCount.className = 'unread-count';
-                    unreadCount.textContent = unreadMessages[u.username];
-                    userItem.appendChild(unreadCount);
-                }
-                if (u.status === 'offline') {
-                    const lastSeen = document.createElement('span');
-                    lastSeen.className = 'last-seen';
-                    lastSeen.textContent = formatTimeAgo(u.lastSeen);
-                    userItem.appendChild(lastSeen);
-                }
-                userList.appendChild(userItem);
-            });
+        currentUsers.sort((a, b) => { if (a.username === user) return -1; if (b.username === user) return 1; if (a.status === 'online' && b.status !== 'online') return -1; if (b.status === 'online' && a.status !== 'online') return 1; return 0; }).forEach(u => {
+            if (!u || !u.username) return;
+            const userItem = document.createElement('li');
+            userItem.className = u.status;
+            if (u.username === user) { userItem.classList.add('self'); }
+            if (u.username !== user) {
+                userItem.addEventListener('click', () => {
+                    currentChat = { type: 'private', name: u.username };
+                    chatTitle.textContent = `Chat with ${u.username}`;
+                    socket.emit('fetch private history', { user1: user, user2: u.username });
+                    if (unreadMessages[u.username]) { unreadMessages[u.username] = 0; updateUserList(); }
+                    usersModalOverlay.classList.add('hidden');
+                });
+            }
+            const statusDot = document.createElement('span'); statusDot.className = 'status-dot';
+            const username = document.createElement('span'); username.className = 'username';
+            username.textContent = u.username;
+            userItem.appendChild(statusDot);
+            userItem.appendChild(username);
+            if (unreadMessages[u.username] > 0) { const unreadCount = document.createElement('span'); unreadCount.className = 'unread-count'; unreadCount.textContent = unreadMessages[u.username]; userItem.appendChild(unreadCount); }
+            if (u.status === 'offline') { const lastSeen = document.createElement('span'); lastSeen.className = 'last-seen'; lastSeen.textContent = formatTimeAgo(u.lastSeen); userItem.appendChild(lastSeen); }
+            userList.appendChild(userItem);
+        });
     }
 
-    // --- LOGIC TÌM KIẾM ---
     searchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const searchTerm = searchInput.value.trim();
-        if (!searchTerm) {
-            socket.emit('join channel', { newChannel: currentChat.name });
-            return;
-        }
+        e.preventDefault(); const searchTerm = searchInput.value.trim();
+        if (!searchTerm) { socket.emit('join channel', { newChannel: currentChat.name }); return; }
         try {
             const response = await fetch(`/search?term=${encodeURIComponent(searchTerm)}&room=${encodeURIComponent(currentChat.name)}`);
             const results = await response.json();
@@ -175,14 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsBanner.innerHTML = `<span>Kết quả tìm kiếm cho: "<strong>${searchTerm}</strong>"</span><button id="clear-search-btn">Xóa tìm kiếm</button>`;
             messages.prepend(resultsBanner);
             results.forEach(msg => addMessage(msg, false));
-            document.getElementById('clear-search-btn').addEventListener('click', () => {
-                searchInput.value = '';
-                socket.emit('join channel', { newChannel: currentChat.name });
-            });
+            document.getElementById('clear-search-btn').addEventListener('click', () => { searchInput.value = ''; socket.emit('join channel', { newChannel: currentChat.name }); });
         } catch (error) { console.error('Lỗi khi tìm kiếm:', error); }
     });
 
-    // --- LOGIC GỬI FILE & EMOJI ---
     emojiBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!emojiPicker) { emojiPicker = document.createElement('emoji-picker'); form.appendChild(emojiPicker); emojiPicker.addEventListener('emoji-click', event => { input.value += event.detail.unicode; }); } emojiPicker.classList.toggle('visible'); });
     document.addEventListener('click', () => { if (emojiPicker && emojiPicker.classList.contains('visible')) { emojiPicker.classList.remove('visible'); } });
     attachBtn.addEventListener('click', () => { fileInput.click(); });
@@ -204,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = null;
     });
 
-    // --- LOGIC TIN NHẮN ---
     const addMessage = (message, isPrivate = false) => {
         const item = document.createElement('li');
         item.id = message._id;
@@ -215,19 +157,26 @@ document.addEventListener('DOMContentLoaded', () => {
         item.classList.add(isConsecutive ? 'consecutive-message' : 'first-message');
 
         if (message.parentMessage && message.parentMessage.user) {
-            const quote = document.createElement('div'); quote.className = 'parent-message-quote';
+            const quote = document.createElement('div');
+            quote.className = 'parent-message-quote';
             const quoteUser = document.createElement('strong');
-            const parentSender = isPrivate ? message.parentMessage.fromUser : message.parentMessage.user;
-            quoteUser.textContent = parentSender;
+            quoteUser.textContent = message.parentMessage.user;
             const quoteContent = document.createElement('span');
             const contentPreview = message.parentMessage.content.startsWith('http') ? '[Hình ảnh]' : (message.parentMessage.content.length > 50 ? message.parentMessage.content.substring(0, 50) + '...' : message.parentMessage.content);
             quoteContent.textContent = `: ${contentPreview}`;
-            quote.appendChild(quoteUser); quote.appendChild(quoteContent); item.appendChild(quote);
+            quote.appendChild(quoteUser);
+            quote.appendChild(quoteContent);
+            item.appendChild(quote);
         }
-        const sender = document.createElement('strong'); sender.textContent = senderName;
+
+        const sender = document.createElement('strong');
+        sender.textContent = senderName;
         item.appendChild(sender);
+
         if (message.type === 'image') {
-            const img = document.createElement('img'); img.src = message.content; img.className = 'chat-image';
+            const img = document.createElement('img');
+            img.src = message.content;
+            img.className = 'chat-image';
             item.appendChild(img);
         } else {
             const content = document.createElement('span');
@@ -235,19 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
             content.textContent = message.content;
             item.appendChild(content);
         }
+
         if (senderName === user) { item.classList.add('my-message'); } else { item.classList.add('other-message'); }
         
-        // **THÊM LẠI PHẦN HIỂN THỊ THỜI GIAN**
         const timestamp = new Date(message.timestamp);
         const timeElement = document.createElement('span');
         timeElement.className = 'message-timestamp';
         const now = new Date();
         const isToday = timestamp.toDateString() === now.toDateString();
-        if (isToday) {
-            timeElement.textContent = timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        } else {
-            timeElement.textContent = timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        }
+        if (isToday) { timeElement.textContent = timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); }
+        else { timeElement.textContent = timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
         timeElement.title = timestamp.toLocaleString('vi-VN');
         item.appendChild(timeElement);
         
@@ -280,20 +226,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 editBtn.className = 'edit-btn';
                 editBtn.textContent = 'Edit';
                 editBtn.onclick = () => {
-                    const messageContentElement = item.querySelector('.message-content'); if (!messageContentElement) return;
+                    const messageContentElement = item.querySelector('.message-content');
+                    if (!messageContentElement) return;
                     const currentContent = messageContentElement.textContent;
                     const editInput = document.createElement('input'); editInput.type = 'text'; editInput.className = 'message-content-input'; editInput.value = currentContent;
-                    messageContentElement.replaceWith(editInput); editInput.focus();
+                    messageContentElement.replaceWith(editInput);
+                    editInput.focus();
                     editInput.onkeydown = (e) => {
                         if (e.key === 'Enter') {
-                            e.preventDefault(); const newContent = editInput.value.trim();
+                            e.preventDefault();
+                            const newContent = editInput.value.trim();
                             if (newContent && newContent !== currentContent) {
-                                if (isPrivate) { socket.emit('edit private message', { messageId: message._id, newContent }); } 
+                                if (isPrivate) { socket.emit('edit private message', { messageId: message._id, newContent }); }
                                 else { socket.emit('edit message', { messageId: message._id, newContent }); }
                             }
                             editInput.replaceWith(messageContentElement);
                             messageContentElement.textContent = newContent || currentContent;
-                        } else if (e.key === 'Escape') { editInput.replaceWith(messageContentElement); }
+                        } else if (e.key === 'Escape') {
+                            editInput.replaceWith(messageContentElement);
+                        }
                     };
                 };
                 buttonsWrapper.appendChild(editBtn);
@@ -307,18 +258,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', function(e) {
         e.preventDefault(); if (!input.value) return;
+        const parentMessageData = replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user || replyingToMessage.fromUser, content: replyingToMessage.content } : null;
         if (currentChat.type === 'channel') {
-            const messageData = { user, content: input.value, type: 'text', room: currentChat.name, parentMessage: replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user, fromUser: replyingToMessage.fromUser, content: replyingToMessage.content } : null };
+            const messageData = { user, content: input.value, type: 'text', room: currentChat.name, parentMessage: parentMessageData };
             socket.emit('chat message', messageData);
         } else {
-            const messageData = { fromUser: user, toUser: currentChat.name, content: input.value, type: 'text', parentMessage: replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user, fromUser: replyingToMessage.fromUser, content: replyingToMessage.content } : null };
+            const messageData = { fromUser: user, toUser: currentChat.name, content: input.value, type: 'text', parentMessage: parentMessageData };
             socket.emit('private message', messageData);
         }
         input.value = ''; replyingToMessage = null; replyingBanner.classList.add('hidden');
         socket.emit('stop typing', { room: currentChat.name });
     });
     
-    // --- LẮNG NGHE CÁC SỰ KIỆN TỪ SERVER ---
     socket.on('channels', (channels) => { updateChannelList(channels, currentChat.name); });
     socket.on('load old messages', (oldMessages) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; oldMessages.forEach(msg => addMessage(msg, false)); });
     socket.on('private history loaded', (history) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; history.forEach(msg => addMessage(msg, true)); });
@@ -327,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (msg.fromUser === user) { if (currentChat.type === 'private' && currentChat.name === msg.toUser) { addMessage(msg, true); } return; }
         const chatPartner = msg.fromUser;
         const isInPrivateChatWithSender = (currentChat.type === 'private' && currentChat.name === chatPartner);
-        if (isInPrivateChatWithSender) { addMessage(msg, true); } 
+        if (isInPrivateChatWithSender) { addMessage(msg, true); }
         else {
             unreadMessages[chatPartner] = (unreadMessages[chatPartner] || 0) + 1;
             pmNotificationDot.classList.remove('hidden');
