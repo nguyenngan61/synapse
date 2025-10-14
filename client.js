@@ -285,10 +285,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 buttonsWrapper.appendChild(editBtn);
             }
         }
+        
+        const timestamp = new Date(message.timestamp);
+        const timeElement = document.createElement('span');
+        timeElement.className = 'message-timestamp';
+
+        const now = new Date();
+        const isToday = timestamp.toDateString() === now.toDateString();
+
+        if (isToday) {
+            timeElement.textContent = timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            timeElement.textContent = timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        timeElement.title = timestamp.toLocaleString('vi-VN'); // Tooltip vẫn giữ nguyên cho máy tính
+
+        item.appendChild(timeElement);
+
         item.appendChild(buttonsWrapper);
         messages.appendChild(item);
         messages.scrollTop = messages.scrollHeight;
-        lastMessageInfo = { user: senderName, timestamp: message.timestamp };
+        lastMessageInfo = { user: senderName, timestamp: message.timestamp };    
     };
 
     form.addEventListener('submit', function(e) {
@@ -351,4 +369,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatTimeAgo(dateString) { const date = new Date(dateString); const now = new Date(); const seconds = Math.round((now - date) / 1000); const minutes = Math.round(seconds / 60); const hours = Math.round(minutes / 60); const days = Math.round(hours / 24); if (seconds < 60) return 'offline just now'; if (minutes < 60) return `offline ${minutes} minutes ago`; if (hours < 24) return `offline ${hours} hours ago`; return `offline ${days} days ago`; }
     socket.on('update user list', (users) => { currentUsers = users.filter(u => u != null); updateUserList(); });
+    setInterval(() => { if (usersModalOverlay.classList.contains('hidden') === false) { updateUserList(); } }, 60000);
 });

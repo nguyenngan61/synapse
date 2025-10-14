@@ -51,16 +51,21 @@ app.post('/upload-image', upload.single('image'), async (req, res) => {
 });
 
 app.get('/search', async (req, res) => {
-    const { term, room } = req.query; if (!term || !room) { return res.status(400).json({ error: 'Thiếu từ khóa hoặc phòng chat.' }); }
+    const { term, room } = req.query;
+    if (!term || !room) { return res.status(400).json({ error: 'Thiếu từ khóa hoặc phòng chat.' }); }
     try {
-        const results = await Message.find({ room: room, type: 'text', content: { $regex: term, $options: 'i' } }).sort({ timestamp: -1 });
+        const results = await Message.find({
+            room: room,
+            type: 'text',
+            content: { $regex: term, $options: 'i' }
+        }).sort({ timestamp: -1 });
         res.json(results);
     } catch (error) { console.error('[SERVER] Lỗi tìm kiếm tin nhắn:', error); res.status(500).json({ error: 'Lỗi server khi tìm kiếm.' }); }
 });
 
 io.on('connection', (socket) => {
     socket.on('user joined', async ({ username, channel }) => {
-        onlineUsers[socket.id] = { username, status: 'online' };
+        onlineUsers[socket.id] = { username, status: 'online', lastSeen: null };
         socket.join(channel);
         socket.emit('channels', channels);
         io.emit('update user list', Object.values(onlineUsers));
@@ -69,6 +74,7 @@ io.on('connection', (socket) => {
             socket.emit('load old messages', messages);
         } catch (error) { console.error('[SERVER] Lỗi tải tin nhắn cũ:', error); }
     });
+
     socket.on('join channel', async ({ previousChannel, newChannel }) => {
         if (previousChannel) socket.leave(previousChannel);
         socket.join(newChannel);
@@ -77,31 +83,58 @@ io.on('connection', (socket) => {
             socket.emit('load old messages', messages);
         } catch (error) { console.error('[SERVER] Lỗi tải tin nhắn cho kênh mới:', error); }
     });
+
     socket.on('disconnect', () => {
         const user = onlineUsers[socket.id];
-        if (user) { delete onlineUsers[socket.id]; io.emit('update user list', Object.values(onlineUsers)); }
+        if (user) {
+            user.status = 'offline';
+            user.lastSeen = new Date();
+            io.emit('update user list', Object.values(onlineUsers));
+            console.log(`[SERVER] User ${user.username} đã chuyển sang offline.`);
+        }
     });
+
     socket.on('chat message', async (data) => {
         const newMessage = new Message({ user: data.user, content: data.content, type: data.type || 'text', room: data.room, parentMessage: data.parentMessage || null });
-        try { await newMessage.save(); io.to(data.room).emit('chat message', newMessage); } catch (error) { console.error('[SERVER] Lỗi lưu tin nhắn:', error); }
+        try {
+            await newMessage.save();
+            io.to(data.room).emit('chat message', newMessage);
+        } catch (error) { console.error('[SERVER] Lỗi lưu tin nhắn:', error); }
     });
+
     socket.on('private message', async (data) => {
         try {
             const newPm = new PrivateMessage({ fromUser: data.fromUser, toUser: data.toUser, content: data.content, type: data.type || 'text' });
             await newPm.save();
             const recipientSocketId = Object.keys(onlineUsers).find(id => onlineUsers[id].username === data.toUser);
-            if (recipientSocketId) { io.to(recipientSocketId).emit('receive private message', newPm); }
+            if (recipientSocketId) {
+                io.to(recipientSocketId).emit('receive private message', newPm);
+            }
             socket.emit('receive private message', newPm);
         } catch (error) { console.error('[SERVER] Lỗi lưu tin nhắn riêng:', error); }
     });
+
     socket.on('fetch private history', async ({ user1, user2 }) => {
         try {
             const history = await PrivateMessage.find({ $or: [{ fromUser: user1, toUser: user2 }, { fromUser: user2, toUser: user1 }] }).sort({ timestamp: 1 });
             socket.emit('private history loaded', history);
         } catch (error) { console.error('[SERVER] Lỗi tải lịch sử chat riêng:', error); }
     });
-    socket.on('delete message', async (messageId) => { try { const deletedMessage = await Message.findByIdAndDelete(messageId); if (deletedMessage) { io.to(deletedMessage.room).emit('message deleted', messageId); } } catch (error) { console.error('[SERVER] Lỗi xóa tin nhắn:', error); } });
-    socket.on('edit message', async ({ messageId, newContent }) => { try { const updatedMessage = await Message.findByIdAndUpdate(messageId, { content: newContent }, { new: true }); if (updatedMessage) { io.to(updatedMessage.room).emit('message edited', updatedMessage); } } catch (error) { console.error('[SERVER] Lỗi sửa tin nhắn:', error); } });
+
+    socket.on('delete message', async (messageId) => {
+        try {
+            const deletedMessage = await Message.findByIdAndDelete(messageId);
+            if (deletedMessage) { io.to(deletedMessage.room).emit('message deleted', messageId); }
+        } catch (error) { console.error('[SERVER] Lỗi xóa tin nhắn:', error); }
+    });
+
+    socket.on('edit message', async ({ messageId, newContent }) => {
+        try {
+            const updatedMessage = await Message.findByIdAndUpdate(messageId, { content: newContent }, { new: true });
+            if (updatedMessage) { io.to(updatedMessage.room).emit('message edited', updatedMessage); }
+        } catch (error) { console.error('[SERVER] Lỗi sửa tin nhắn:', error); }
+    });
+
     socket.on('typing', (data) => { socket.to(data.room).emit('typing', data.user); });
     socket.on('stop typing', (data) => { socket.to(data.room).emit('stop typing'); });
 });
