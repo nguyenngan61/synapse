@@ -28,8 +28,11 @@ const MessageSchema = new mongoose.Schema({
 const Message = mongoose.model('Message', MessageSchema);
 
 const PrivateMessageSchema = new mongoose.Schema({
-    fromUser: String, toUser: String, content: String,
+    fromUser: String,
+    toUser: String,
+    content: String,
     type: { type: String, default: 'text' },
+    parentMessage: { _id: String, user: String, content: String }, // THÊM DÒNG NÀY
     timestamp: { type: Date, default: Date.now }
 });
 const PrivateMessage = mongoose.model('PrivateMessage', PrivateMessageSchema);
@@ -104,7 +107,13 @@ io.on('connection', (socket) => {
 
     socket.on('private message', async (data) => {
         try {
-            const newPm = new PrivateMessage({ fromUser: data.fromUser, toUser: data.toUser, content: data.content, type: data.type || 'text' });
+            const newPm = new PrivateMessage({
+                fromUser: data.fromUser,
+                toUser: data.toUser,
+                content: data.content,
+                type: data.type || 'text',
+                parentMessage: data.parentMessage || null // THÊM DÒNG NÀY
+            });
             await newPm.save();
             const recipientSocketId = Object.keys(onlineUsers).find(id => onlineUsers[id].username === data.toUser);
             if (recipientSocketId) {
@@ -112,6 +121,44 @@ io.on('connection', (socket) => {
             }
             socket.emit('receive private message', newPm);
         } catch (error) { console.error('[SERVER] Lỗi lưu tin nhắn riêng:', error); }
+    });
+
+    socket.on('delete private message', async (messageId) => {
+        try {
+            const deletedMessage = await PrivateMessage.findByIdAndDelete(messageId);
+            if (deletedMessage) {
+                // Tìm socket ID của người nhận và gửi sự kiện xóa
+                const recipientSocketId = Object.keys(onlineUsers).find(id => onlineUsers[id].username === deletedMessage.toUser);
+                if (recipientSocketId) {
+                    io.to(recipientSocketId).emit('private message deleted', messageId);
+                }
+                // Gửi sự kiện xóa cho chính người gửi
+                socket.emit('private message deleted', messageId);
+            }
+        } catch (error) {
+            console.error('[SERVER] Lỗi xóa tin nhắn riêng:', error);
+        }
+    });
+
+    socket.on('edit private message', async ({ messageId, newContent }) => {
+        try {
+            const updatedMessage = await PrivateMessage.findByIdAndUpdate(
+                messageId,
+                { content: newContent },
+                { new: true }
+            );
+            if (updatedMessage) {
+                // Tìm socket ID của người nhận và gửi tin nhắn đã cập nhật
+                const recipientSocketId = Object.keys(onlineUsers).find(id => onlineUsers[id].username === updatedMessage.toUser);
+                if (recipientSocketId) {
+                    io.to(recipientSocketId).emit('private message edited', updatedMessage);
+                }
+                // Gửi lại cho chính người gửi
+                socket.emit('private message edited', updatedMessage);
+            }
+        } catch (error) {
+            console.error('[SERVER] Lỗi sửa tin nhắn riêng:', error);
+        }
     });
 
     socket.on('fetch private history', async ({ user1, user2 }) => {

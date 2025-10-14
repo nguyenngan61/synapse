@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (u.username === user) {
                     userItem.classList.add('self');
                 }
-                if (u.username !== user && u.status === 'online') {
+                if (u.username !== user) {
                     userItem.addEventListener('click', () => {
                         currentChat = { type: 'private', name: u.username };
                         chatTitle.textContent = `Chat with ${u.username}`;
@@ -214,9 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isConsecutive = senderName === lastMessageInfo.user && !message.parentMessage && lastMessageTime && (messageTime - lastMessageTime) < CONSECUTIVE_MESSAGE_TIMEOUT;
         item.classList.add(isConsecutive ? 'consecutive-message' : 'first-message');
 
-        if (!isPrivate && message.parentMessage && message.parentMessage.user) {
+        if (message.parentMessage && message.parentMessage.user) {
             const quote = document.createElement('div'); quote.className = 'parent-message-quote';
-            const quoteUser = document.createElement('strong'); quoteUser.textContent = message.parentMessage.user;
+            const quoteUser = document.createElement('strong');
+            const parentSender = isPrivate ? message.parentMessage.fromUser : message.parentMessage.user;
+            quoteUser.textContent = parentSender;
             const quoteContent = document.createElement('span');
             const contentPreview = message.parentMessage.content.startsWith('http') ? '[Hình ảnh]' : (message.parentMessage.content.length > 50 ? message.parentMessage.content.substring(0, 50) + '...' : message.parentMessage.content);
             quoteContent.textContent = `: ${contentPreview}`;
@@ -235,93 +237,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (senderName === user) { item.classList.add('my-message'); } else { item.classList.add('other-message'); }
         
+        // **THÊM LẠI PHẦN HIỂN THỊ THỜI GIAN**
+        const timestamp = new Date(message.timestamp);
+        const timeElement = document.createElement('span');
+        timeElement.className = 'message-timestamp';
+        const now = new Date();
+        const isToday = timestamp.toDateString() === now.toDateString();
+        if (isToday) {
+            timeElement.textContent = timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            timeElement.textContent = timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+        timeElement.title = timestamp.toLocaleString('vi-VN');
+        item.appendChild(timeElement);
+        
         const buttonsWrapper = document.createElement('div');
         buttonsWrapper.className = 'message-buttons';
-        if (!isPrivate) {
-            const replyBtn = document.createElement('button'); replyBtn.className = 'reply-btn'; replyBtn.textContent = 'Reply';
-            replyBtn.onclick = () => {
-                replyingToMessage = message;
-                replyingBanner.innerHTML = `<div id="replying-to-banner-content"><strong>Replying to ${message.user}:</strong> ${message.type === 'image' ? '[Hình ảnh]' : message.content}</div><button id="cancel-reply-btn">&times;</button>`;
-                replyingBanner.classList.remove('hidden');
-                document.getElementById('cancel-reply-btn').addEventListener('click', () => {
-                    replyingToMessage = null;
-                    replyingBanner.classList.add('hidden');
-                });
-                input.focus();
-            };
-            buttonsWrapper.appendChild(replyBtn);
-        }
-        if (senderName === user && !isPrivate) {
+        
+        const replyBtn = document.createElement('button');
+        replyBtn.className = 'reply-btn';
+        replyBtn.textContent = 'Reply';
+        replyBtn.onclick = () => {
+            replyingToMessage = message;
+            replyingBanner.innerHTML = `<div id="replying-to-banner-content"><strong>Replying to ${senderName}:</strong> ${message.type === 'image' ? '[Hình ảnh]' : message.content}</div><button id="cancel-reply-btn">&times;</button>`;
+            replyingBanner.classList.remove('hidden');
+            document.getElementById('cancel-reply-btn').addEventListener('click', () => {
+                replyingToMessage = null;
+                replyingBanner.classList.add('hidden');
+            });
+            input.focus();
+        };
+        buttonsWrapper.appendChild(replyBtn);
+
+        if (senderName === user) {
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = 'Delete';
-            deleteBtn.onclick = () => { if (confirm('Bạn có chắc muốn xóa tin nhắn này?')) { socket.emit('delete message', message._id); } };
+            deleteBtn.onclick = () => { if (confirm('Bạn có chắc muốn xóa tin nhắn này?')) { isPrivate ? socket.emit('delete private message', message._id) : socket.emit('delete message', message._id); } };
             buttonsWrapper.appendChild(deleteBtn);
             if (message.type === 'text') {
                 const editBtn = document.createElement('button');
                 editBtn.className = 'edit-btn';
                 editBtn.textContent = 'Edit';
                 editBtn.onclick = () => {
-                    const messageContentElement = item.querySelector('.message-content');
-                    if (!messageContentElement) return;
+                    const messageContentElement = item.querySelector('.message-content'); if (!messageContentElement) return;
                     const currentContent = messageContentElement.textContent;
                     const editInput = document.createElement('input'); editInput.type = 'text'; editInput.className = 'message-content-input'; editInput.value = currentContent;
-                    messageContentElement.replaceWith(editInput);
-                    editInput.focus();
+                    messageContentElement.replaceWith(editInput); editInput.focus();
                     editInput.onkeydown = (e) => {
                         if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const newContent = editInput.value.trim();
+                            e.preventDefault(); const newContent = editInput.value.trim();
                             if (newContent && newContent !== currentContent) {
-                                socket.emit('edit message', { messageId: message._id, newContent });
+                                if (isPrivate) { socket.emit('edit private message', { messageId: message._id, newContent }); } 
+                                else { socket.emit('edit message', { messageId: message._id, newContent }); }
                             }
                             editInput.replaceWith(messageContentElement);
                             messageContentElement.textContent = newContent || currentContent;
-                        } else if (e.key === 'Escape') {
-                            editInput.replaceWith(messageContentElement);
-                        }
+                        } else if (e.key === 'Escape') { editInput.replaceWith(messageContentElement); }
                     };
                 };
                 buttonsWrapper.appendChild(editBtn);
             }
         }
-        
-        const timestamp = new Date(message.timestamp);
-        const timeElement = document.createElement('span');
-        timeElement.className = 'message-timestamp';
-
-        const now = new Date();
-        const isToday = timestamp.toDateString() === now.toDateString();
-
-        if (isToday) {
-            timeElement.textContent = timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        } else {
-            timeElement.textContent = timestamp.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        }
-
-        timeElement.title = timestamp.toLocaleString('vi-VN'); // Tooltip vẫn giữ nguyên cho máy tính
-
-        item.appendChild(timeElement);
-
         item.appendChild(buttonsWrapper);
         messages.appendChild(item);
         messages.scrollTop = messages.scrollHeight;
-        lastMessageInfo = { user: senderName, timestamp: message.timestamp };    
+        lastMessageInfo = { user: senderName, timestamp: message.timestamp };
     };
 
     form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!input.value) return;
+        e.preventDefault(); if (!input.value) return;
         if (currentChat.type === 'channel') {
-            const messageData = { user, content: input.value, type: 'text', room: currentChat.name, parentMessage: replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user, content: replyingToMessage.content } : null };
+            const messageData = { user, content: input.value, type: 'text', room: currentChat.name, parentMessage: replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user, fromUser: replyingToMessage.fromUser, content: replyingToMessage.content } : null };
             socket.emit('chat message', messageData);
         } else {
-            const messageData = { fromUser: user, toUser: currentChat.name, content: input.value, type: 'text' };
+            const messageData = { fromUser: user, toUser: currentChat.name, content: input.value, type: 'text', parentMessage: replyingToMessage ? { _id: replyingToMessage._id, user: replyingToMessage.user, fromUser: replyingToMessage.fromUser, content: replyingToMessage.content } : null };
             socket.emit('private message', messageData);
         }
-        input.value = '';
-        replyingToMessage = null;
-        replyingBanner.classList.add('hidden');
+        input.value = ''; replyingToMessage = null; replyingBanner.classList.add('hidden');
         socket.emit('stop typing', { room: currentChat.name });
     });
     
@@ -329,37 +322,23 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('channels', (channels) => { updateChannelList(channels, currentChat.name); });
     socket.on('load old messages', (oldMessages) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; oldMessages.forEach(msg => addMessage(msg, false)); });
     socket.on('private history loaded', (history) => { messages.innerHTML = ''; lastMessageInfo = { user: null, timestamp: null }; history.forEach(msg => addMessage(msg, true)); });
-    socket.on('chat message', (msg) => {
-        if (currentChat.type === 'channel' && currentChat.name === msg.room) {
-            typingIndicator.textContent = ''; addMessage(msg, false);
-            if (document.hidden && msg.user !== user) { notificationCount++; document.title = `(${notificationCount}) ${originalTitle}`; notificationSound.currentTime = 0; notificationSound.play().catch(e => {}); }
-        }
-    });
+    socket.on('chat message', (msg) => { if (currentChat.type === 'channel' && currentChat.name === msg.room) { typingIndicator.textContent = ''; addMessage(msg, false); if (document.hidden && msg.user !== user) { notificationCount++; document.title = `(${notificationCount}) ${originalTitle}`; notificationSound.currentTime = 0; notificationSound.play().catch(e => {}); } } });
     socket.on('receive private message', (msg) => {
-        if (msg.fromUser === user) {
-            if (currentChat.type === 'private' && currentChat.name === msg.toUser) {
-                addMessage(msg, true);
-            }
-            return;
-        }
+        if (msg.fromUser === user) { if (currentChat.type === 'private' && currentChat.name === msg.toUser) { addMessage(msg, true); } return; }
         const chatPartner = msg.fromUser;
         const isInPrivateChatWithSender = (currentChat.type === 'private' && currentChat.name === chatPartner);
-        if (isInPrivateChatWithSender) {
-            addMessage(msg, true);
-        } else {
+        if (isInPrivateChatWithSender) { addMessage(msg, true); } 
+        else {
             unreadMessages[chatPartner] = (unreadMessages[chatPartner] || 0) + 1;
             pmNotificationDot.classList.remove('hidden');
             updateUserList();
-            if (document.hidden) {
-                notificationCount++;
-                document.title = `(${notificationCount}) New PM from ${chatPartner}!`;
-                notificationSound.currentTime = 0;
-                notificationSound.play().catch(e => {});
-            }
+            if (document.hidden) { notificationCount++; document.title = `(${notificationCount}) New PM from ${chatPartner}!`; notificationSound.currentTime = 0; notificationSound.play().catch(e => {}); }
         }
     });
     socket.on('message deleted', (messageId) => { const messageElement = document.getElementById(messageId); if (messageElement) { messageElement.remove(); } });
+    socket.on('private message deleted', (messageId) => { const messageElement = document.getElementById(messageId); if (messageElement) { messageElement.remove(); } });
     socket.on('message edited', (updatedMessage) => { const messageElement = document.getElementById(updatedMessage._id); if (messageElement) { const contentElement = messageElement.querySelector('.message-content'); if (contentElement) { contentElement.textContent = updatedMessage.content; } } });
+    socket.on('private message edited', (updatedMessage) => { const messageElement = document.getElementById(updatedMessage._id); if (messageElement) { const contentElement = messageElement.querySelector('.message-content'); if (contentElement) { contentElement.textContent = updatedMessage.content; } } });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { notificationCount = 0; document.title = originalTitle; } });
     
     let typingTimer; const TYPING_TIMER_LENGTH = 2000;
@@ -369,5 +348,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatTimeAgo(dateString) { const date = new Date(dateString); const now = new Date(); const seconds = Math.round((now - date) / 1000); const minutes = Math.round(seconds / 60); const hours = Math.round(minutes / 60); const days = Math.round(hours / 24); if (seconds < 60) return 'offline just now'; if (minutes < 60) return `offline ${minutes} minutes ago`; if (hours < 24) return `offline ${hours} hours ago`; return `offline ${days} days ago`; }
     socket.on('update user list', (users) => { currentUsers = users.filter(u => u != null); updateUserList(); });
-    setInterval(() => { if (usersModalOverlay.classList.contains('hidden') === false) { updateUserList(); } }, 60000);
+    setInterval(() => { if (usersModalOverlay && !usersModalOverlay.classList.contains('hidden')) { updateUserList(); } }, 60000);
 });
